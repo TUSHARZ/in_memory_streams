@@ -1,0 +1,37 @@
+-- This script assigns partition to a consumer and also mark it assigned in group partitions
+-- KEYS: [CONSUMER_ASSIGNED_PARTITIONS::{consumer_member_id},CONSUMER_GROUP_PARTITIONS::{group_name},topic_partition_id]
+local partition = KEYS[3]
+redis.call('SADD', KEYS[2], partition)
+redis.call('HSET', KEYS[1], partition, 'assigned')
+-- local myTable = {}
+-- local index =1
+-- for value in string.gmatch(KEYS[1],'([^,]+)') do
+--     myTable[index] = value
+--     index = index+1
+-- end
+-- return table.concat(myTable, ' ')
+-- popped = redis.call('SPOP', KEYS[1], redis.call('SCARD', KEYS[1]))
+-- for value in popped do
+--     myTable[index] = value
+--     index = index+1
+--     myTable[index] = 'unassigned'
+--     index = index+1
+-- end
+-- redis.call('HSET', KEYS[2], unpack(myTable))
+--
+--
+-- local myTable = {'a','b','c'} return table.concat(myTable, ' ') for value in string.gmatch(KEYS[1],'([^,]+)') do myTable[value] = 'unassigned' end return table.concat(myTable, ' ')
+--
+-- local myTable = {} local index =1 for value in string.gmatch(KEYS[1],'([^,]+)') do myTable[index] = value index = index+1 end redis.call('HMSET', keys[2], table.concat(myTable, ' ')) return table.concat(myTable, ' ')
+--
+-- KEYS[1] the set to pop from, and KEYS[2] the hash in which values will be set
+-- local myTable={}
+-- local index=1
+-- local popped = redis.call('SPOP', KEYS[1], redis.call('SCARD', KEYS[1]))
+-- for k, value in ipairs(popped) do
+--     myTable[index] = value
+--     index = index+1
+--     myTable[index] = 'unassigned'
+--     index = index+1
+-- end
+-- redis.call('HSET', KEYS[2], unpack(myTable))
