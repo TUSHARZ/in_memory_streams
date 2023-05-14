@@ -1,5 +1,5 @@
 from broker.partition_strategy.base_partition_strategy import TopicDataPartitionStrategy
-from broker.topic import Topic
+from broker.topic import Topic, LLStorage
 
 
 class Broker:
@@ -8,9 +8,10 @@ class Broker:
     topics_subscription = defaultdict(set)
 
     @classmethod
-    def create_topic(cls, topic_name, partitions, strategy: TopicDataPartitionStrategy):
+    def create_topic(cls, topic_name, partitions, strategy: TopicDataPartitionStrategy, storage_type=LLStorage):
         """
         Create new topic
+        :param storage_type: storage class to use
         :param topic_name: Topic name
         :param partitions: Number of partitions
         :param strategy: Data Partition Strategy
@@ -18,7 +19,7 @@ class Broker:
         """
         if cls.topics.get(topic_name):
             raise Exception("topic already exists")
-        cls.topics[topic_name] = Topic(topic_name, partitions, strategy)
+        cls.topics[topic_name] = Topic(topic_name, partitions, strategy, storage_type=storage_type)
 
     @classmethod
     def add_data_to_topic(cls, topic_name, data):
@@ -55,4 +56,3 @@ class Broker:
         from consumer.group_coordinator_client import GroupCoordinatorClient
         for consumer_group in cls.topics_subscription[topic_name]:
             GroupCoordinatorClient.topic_partitions_changed(consumer_group, topic_name)
-

@@ -44,11 +44,6 @@ class GroupCoordinator:
     Rebalance partitions between consumers attached to group
     """
 
-    consumer_nodes = set()  # consumer ids of consumer nodes assigned to the group
-    consumer_nodes_mapping = defaultdict(set)  # partition mappings assigned to consumer nodes
-    partitions = {}  # overall topic_partitions assigned to the group
-    heart_beat = {}  # heart beat tracker of all consumers
-
     def __init__(self, name, partition_assignment_strategy='EqualAssignmentStrategy', is_leader=False):
         """
         :param name: Consumer group name
@@ -63,6 +58,10 @@ class GroupCoordinator:
         self.broker_client = Broker
         self.is_leader = is_leader
         self.offsetClient = OffsetClient
+        self.partitions = {}  # overall topic_partitions assigned to the group
+        self.heart_beat = {}  # heart beat tracker of all consumers
+        self.consumer_nodes = set()  # consumer ids of consumer nodes assigned to the group
+        self.consumer_nodes_mapping = defaultdict(set)  # partition mappings assigned to consumer nodes
 
         GroupCoordinatorClient.register_group_coordinator(name, self)
 
@@ -111,14 +110,13 @@ class GroupCoordinator:
                 self.consumer_nodes_mapping[consumer_id].remove(topic_partition_id)
                 self.partitions[topic_partition_id] = PartitionStatus.UNASSIGNED.value
 
-    @classmethod
-    def get_assigned_partitions(cls, consumer_id):
+    def get_assigned_partitions(self, consumer_id):
         """
         get assigned partitions for a consumer member
         :param consumer_id:
         :return:
         """
-        return cls.consumer_nodes_mapping[consumer_id]
+        return self.consumer_nodes_mapping[consumer_id]
 
     def print_curr_assignment(self):
         for cnsr_id in self.consumer_nodes:
@@ -150,14 +148,13 @@ class GroupCoordinator:
                 self.partitions[curr] = PartitionStatus.UNASSIGNED.value
         self.rebalance_partitions()
 
-    @classmethod
-    def get_unassigned_partitions(cls):
+    def get_unassigned_partitions(self):
         """
         Get unassigned partitions in the group
         :return:
         """
 
-        return set([topic_partition_id for topic_partition_id, status in cls.partitions.items() if
+        return set([topic_partition_id for topic_partition_id, status in self.partitions.items() if
                     status == PartitionStatus.UNASSIGNED.value])
 
     def check_unassigned_partitions(self):
@@ -207,7 +204,9 @@ class GroupCoordinator:
         members = self.get_consumer_nodes_in_group()
         if not members:
             print("no consumer member attached to group")
-            # return
+            self.rebalance_lock.release()
+            return
+
         partitions_assignment = self.partition_assignment_strategy(members).get_partitions(
             self.partitions_len_in_group())
         print(f'Partitions assignments should be {partitions_assignment}')
@@ -338,14 +337,13 @@ class RedisGroupCoordinatorClient(GroupCoordinator):
         print("consumer_member_changed")
         self.rebalance_partitions()
 
-    @classmethod
-    def get_assigned_partitions(cls, consumer_member_id):
+    def get_assigned_partitions(self, consumer_member_id):
         """
         Get assigned partitions for a consumer from redis
         :param consumer_member_id:
         :return:
         """
-        partitions = cls.redis_client.get_set_members(RedisConsumerGroupKeys.get_partitions_assigned_to_consumers_key(
+        partitions = self.redis_client.get_set_members(RedisConsumerGroupKeys.get_partitions_assigned_to_consumers_key(
             consumer_member_id))
         return partitions
 
